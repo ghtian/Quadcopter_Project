@@ -32,7 +32,7 @@
 
 # ### plot
 
-# In[199]:
+# In[1]:
 
 
 import matplotlib.pyplot as plt
@@ -106,7 +106,7 @@ def plot_run(results, standalone=True):
         plt.show()
 
 
-# In[200]:
+# In[2]:
 
 
 from mpl_toolkits.mplot3d.axes3d import Axes3D
@@ -139,7 +139,7 @@ def show_flight_path(results, target=None):
 
 # ### random Agent
 
-# In[201]:
+# In[3]:
 
 
 import random
@@ -159,7 +159,7 @@ class Basic_Agent():
 # 
 # 下方的 `labels` 列表为模拟数据的注释。所有的信息都储存在 `data.txt` 文档中，并保存在 `results` 目录下。
 
-# In[202]:
+# In[4]:
 
 
 get_ipython().run_line_magic('load_ext', 'autoreload')
@@ -200,13 +200,13 @@ with open(file_output, 'w') as csvfile:
             break
 
 
-# In[203]:
+# In[5]:
 
 
 plot_run(results)
 
 
-# In[204]:
+# In[6]:
 
 
 path = [[results['x'][i], results['y'][i], results['z'][i]] for i in range(len(results['x']))]
@@ -219,7 +219,7 @@ show_flight_path(path, target=None)
 # - `task.sim.v`：四轴飞行器在 ($x,y,z$) 坐标系中的速度。
 # - `task.sim.angular_v`：三个欧拉角的弧度/每秒。
 
-# In[205]:
+# In[7]:
 
 
 # the pose, velocity, and angular velocity of the quadcopter at the end of the episode
@@ -254,14 +254,14 @@ print(task.sim.angular_v)
 # 
 # 请运行下方代码来查看任务示例中智能体的性能。
 
-# In[206]:
+# In[8]:
 
 
 import sys
 import pandas as p
 
 
-# In[207]:
+# In[9]:
 
 
 from agents.policy_search import PolicySearch_Agent
@@ -295,7 +295,7 @@ for i_episode in range(1, num_episodes+1):
     sys.stdout.flush()
 
 
-# In[208]:
+# In[10]:
 
 
 plot_run(results)
@@ -317,7 +317,7 @@ show_flight_path(path, target=target_pos)
 # 
 # 在开发智能体的时候，你还需要关注它的性能。参考下方代码，建立一个机制来存储每个阶段的总奖励值。如果阶段奖励值在逐渐上升，说明你的智能体正在学习。
 
-# In[249]:
+# In[97]:
 
 
 ## TODO: Train your agent here.
@@ -331,21 +331,21 @@ labels = ['time', 'x', 'y', 'z', 'phi', 'theta', 'psi', 'x_velocity',
           'psi_velocity', 'rotor_speed1', 'rotor_speed2', 'rotor_speed3', 'rotor_speed4']
 results = {x : [] for x in labels}
 
-num_episodes = 100
-init_pose = np.array([0., 0., 10., 0., 0., 0.])
-target_pos = np.array([0., 0., 14.])
+num_episodes = 2000
+init_pose = np.array([0., 0., 0., 0., 0., 0.])
+target_pos = np.array([0., 0., 10.])
 task = AgentTask(init_pose=init_pose, target_pos=target_pos)
 #agent = Agent(task) 
 agent = DDPG(task) 
-reward_total = {}
+list_reward = []
 
 for i_episode in range(1, num_episodes+1):
     state = agent.reset_episode() # start a new episode
-    reward_epi = []
+    episode_reward = 0.0
     while True:
         action = agent.act(state) 
         next_state, reward, done = task.step(action)
-        reward_epi.append(reward)
+        episode_reward += reward
         if i_episode == num_episodes:
             to_write = [task.sim.time] + list(task.sim.pose) + list(task.sim.v) + list(task.sim.angular_v) + list(action)
             for ii in range(len(labels)):
@@ -354,15 +354,14 @@ for i_episode in range(1, num_episodes+1):
         state = next_state
         
         if done:
-            if i_episode%10 == 0:
-                print("episode {}, finished!".format(i_episode))
+            list_reward.append(episode_reward)
+            print("\rEpisode = {:4d}, score = {:7.3f} (pose = {:7.3f}), velocity = {}".format(
+                i_episode, episode_reward, task.sim.pose[2], task.sim.v[2]), end="")  # 任务设计为起飞，因此关注在Z轴上的位置与速度
             break
     sys.stdout.flush()
-    #
-    reward_total[i_episode] = np.mean(reward_epi)
 
 
-# In[250]:
+# In[98]:
 
 
 #plot_run(results)
@@ -375,25 +374,41 @@ show_flight_path(path, target=target_pos)
 # 
 # 请绘制智能体在每个阶段中获得的总奖励，这可以是单次运行的奖励值，也可以是多次运行的平均值。
 
-# In[252]:
+# In[112]:
 
 
 ## TODO: Plot the rewards.
-
-#print(reward_total)
-plt.title('reward-process')
-plt.plot(reward_total.keys(), reward_total.values(), label='re')
-plt.xlabel('episode')
-plt.ylabel('reward')
-plt.grid(True)
+plt.title("The whole view")
+plt.plot(list_reward, label='episode_reward')
 plt.legend()
+
+
+# In[114]:
+
+
+plt.title("some episodes")
+plt.plot(list_reward[300:500], label='episode_reward')
+plt.legend()
+
+
+# In[115]:
+
+
+#打印后阶段的平均值
+episode_last = 10
+print("The average reward of last {} episodes is {:4.3f}!".format(
+episode_last,
+np.sum(list_reward[-episode_last:])/episode_last
+))
 
 
 # ## 回顾
 # 
 # **问题 1**：请描述你在 `task.py` 中指定的任务。你如何设计奖励函数？
 # 
-# **回答**：鼓励飞行器起飞。以当前位置与目标位置之间的差距作为基础，取其相反数，附加值0.5，使用双正切压缩该值。使得差距越小，奖励越大。
+# **回答**：
+# - 任务：引导飞行器起飞，起点是[0., 0., 0.], 终点是[0., 0., 10.]，期望飞行器沿Z轴垂直上升。
+# - 奖励函数：以当前位置与目标位置的三轴坐标差作为基础，执行求和，加权以降低影响，取其相反数，附加值+1。使得差距越小，奖励越大。
 # 
 # 
 # **问题 2**：请简要描述你的智能体，你可以参考以下问题：
@@ -403,12 +418,12 @@ plt.legend()
 # - 你使用了什么样的神经网络结构（如果有的话）？请说明层数、大小和激活函数等信息。
 # 
 # **回答**：
-# - 使用了Q值算法，效果尚可。
-# - 𝛾，但设置较高，几乎无衰减。  
-# - 使用了一般的神经网络。
+# - 使用了Q值算法，同时引用了DDPG算法。从智能体的飞行轨迹来看，似乎算法都未够理想。
+# - 𝛾，设置较高，几乎无衰减。同时在构建DDPG智能体时直接指定了两个神经网络的学习率。  
+# - 使用了一般的神经网络，如下所示。
 # 
 #   --行动者：共6层，各层大小与激活函数依次为18 - 32(relu) - 64(relu) - 32(relu) - 4(sigmoid) - 4。  
-#   --评论者：共6层，前3层为分支网络，状态分支的各层大小为18 - 32(relu) - 64(relu)，动作分支的为4 - 32(relu) - 64(relu)，第4层的输入合并了两个分支的输出，后3层的大小依次为64 - 64(relu) - 1，激活函数是relu。
+#   --评论者：共6层，前3层为分支网络，状态分支为18 - 32(relu) - 64(relu)，动作分支为4 - 32(relu) - 64(relu)，第4层的输入合并了两个分支的输出，后3层的结构为64 - 64(relu) - 1。
 # 
 # 
 # **问题 3**：根据你绘制的奖励图，描述智能体的学习状况。
@@ -419,8 +434,8 @@ plt.legend()
 # 
 # **回答**：
 # - 较为困难，似乎无法较好地引导智能体飞向目的地
-# - 存在
-# - 效果一般，越来越远离目标
+# - 从整个学习过程来看，循序渐进的阶段较少，部分阶段急速上升。
+# - 效果不理想，越来越远离目标。最后十个阶段的平均奖励是20.341。
 # 
 # 
 # **问题 4**：请简要总结你的本次项目经历。你可以参考以下问题：
@@ -429,15 +444,15 @@ plt.legend()
 # - 关于四轴飞行器和你的智能体的行为，你是否有一些有趣的发现？
 # 
 # **回答**：
-# - 虽已了解强化学习的基本模型，但将该抽象模型与程序代码对应的过程，花了不少时间；奖励函数比较难把握。
+# - 虽已了解强化学习的基本模型，但将心中的抽象模型与程序代码对应的过程，还是花了不少时间；奖励函数比较难把握。
 # - 发现并重新学习了欧拉角这一方位形态概念，此应为飞行陀螺仪的核心意义所在。
-# - 在设计奖励函数时，我尽量令大部分不期望发生的动作之奖励为负值，因此调整了附加值以达此目的。
+# - 在设计奖励函数时，我尽量令大部分不期望出现的状态之奖励较低，甚至为负值，因此调整了附加值以达此目的。
 # - 附加心得：解决问题时，了解程序框架这一基础步骤，不可逾越。最初解题心切，忽略整体框架而直攻奖励函数，可调整该函数后根本不了解其影响面，最终还是花了大量时间熟悉这个学习模型的代码框架。
 
 # ### (可选)Plot Actor 及 Critic 结构
 # 建议使用 ```from keras.utils import plot_model``` 来显示模型结构；
 
-# In[253]:
+# In[116]:
 
 
 from keras.utils import plot_model
