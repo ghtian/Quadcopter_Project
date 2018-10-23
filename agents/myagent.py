@@ -54,6 +54,7 @@ class Actor:
         self.action_high = action_high
         self.action_range = self.action_high - self.action_low
         self.lr = learning_rate
+        #self.drop_rate = 0.2
 
         # Initialize any other variables here
 
@@ -66,8 +67,13 @@ class Actor:
 
         # Add hidden layers
         net = layers.Dense(units=32, activation='relu')(states)
+        #net = layers.BatchNormalization()(net)
         net = layers.Dense(units=64, activation='relu')(net)
+#         net = layers.Dense(units=128, activation='relu')(net)
+#         net = layers.BatchNormalization()(net)
         net = layers.Dense(units=32, activation='relu')(net)
+        #net = layers.BatchNormalization()(net)
+
 
         # Try different layer sizes, activations, add batch normalization, regularizers, etc.
 
@@ -112,6 +118,7 @@ class Critic:
         self.state_size = state_size
         self.action_size = action_size
         self.lr = learning_rate
+        #self.drop_rate = 0.2
 
         # Initialize any other variables here
 
@@ -125,11 +132,19 @@ class Critic:
 
         # Add hidden layer(s) for state pathway
         net_states = layers.Dense(units=32, activation='relu')(states)
+        #net_states = layers.BatchNormalization()(net_states)
         net_states = layers.Dense(units=64, activation='relu')(net_states)
+#         net_states = layers.Dense(units=128, activation='relu')(net_states)
+#         net_states = layers.BatchNormalization()(net_states)
+
 
         # Add hidden layer(s) for action pathway
         net_actions = layers.Dense(units=32, activation='relu')(actions)
+        #net_actions = layers.BatchNormalization()(net_actions)
         net_actions = layers.Dense(units=64, activation='relu')(net_actions)
+#         net_actions = layers.Dense(units=128, activation='relu')(net_actions)
+#         net_actions = layers.BatchNormalization()(net_actions)
+
 
         # Try different layer sizes, activations, add batch normalization, regularizers, etc.
 
@@ -170,8 +185,8 @@ class DDPG():
         self.action_high = task.action_high
         
         #learning_rate
-        self.aclr = 0.0001
-        self.crlr = 0.001
+        self.aclr = 0.00001
+        self.crlr = 0.000002
 
         # Actor (Policy) Model
         self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high, self.aclr)
